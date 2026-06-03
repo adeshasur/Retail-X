@@ -121,6 +121,10 @@
                     <PasswordBox x:Name="PasswordInput"
                                  Margin="0,7,0,8"
                                  MinHeight="46"
+                                 Padding="14,9"
+                                 FontSize="18"
+                                 CaretBrush="Transparent"
+                                 PasswordChar="●"
                                  controls:PasswordBoxAssistant.BoundPassword="{Binding Password, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  PasswordChanged="OnPasswordChanged"
                                  KeyDown="OnPasswordKeyDown" />
