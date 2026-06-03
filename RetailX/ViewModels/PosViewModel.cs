@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using Microsoft.EntityFrameworkCore;
+using RetailX.Data;
 using RetailX.Models;
 using RetailX.Services;
 
@@ -7,7 +9,6 @@ namespace RetailX.ViewModels;
 
 public class PosViewModel : ObservableObject
 {
-    private static readonly List<HeldBillSnapshot> HeldBills = [];
     private readonly ProductService _productService;
     private readonly SaleService _saleService;
     private readonly int _userId;
@@ -24,6 +25,16 @@ public class PosViewModel : ObservableObject
     private string _lastScannedItemCode = "-";
     private decimal _lastScannedItemPrice;
     private decimal _lastScannedItemStock;
+    private bool _isShiftOpen;
+    private DateTime? _shiftOpenedAt;
+    private decimal _openingCash = 5000;
+    private decimal _closingCash;
+    private decimal _shiftSalesTotal;
+    private decimal _shiftCashTotal;
+    private decimal _shiftCardTotal;
+    private decimal _shiftQrTotal;
+    private int _shiftBillCount;
+    private int _heldBillCount;
 
     public PosViewModel(ProductService productService, SaleService saleService, int userId)
     {
@@ -34,7 +45,7 @@ public class PosViewModel : ObservableObject
         SearchResults = [];
         CartLines = [];
         SearchCommand = new AsyncRelayCommand(SearchAndAddAsync);
-        CompleteSaleCommand = new AsyncRelayCommand(CompleteSaleAsync, () => CartLines.Count > 0);
+        CompleteSaleCommand = new AsyncRelayCommand(CompleteSaleAsync, () => CartLines.Count > 0 && IsShiftOpen);
         CancelBillCommand = new RelayCommand(CancelBill, () => CartLines.Count > 0);
         SetCashCommand = new RelayCommand(() => SelectPayment(PaymentMethod.Cash));
         SetCardCommand = new RelayCommand(() => SelectPayment(PaymentMethod.Card));
@@ -51,8 +62,12 @@ public class PosViewModel : ObservableObject
         AddCash5000Command = new RelayCommand(() => SetPaidAmount(PaidAmount + 5000));
         ClearPaidCommand = new RelayCommand(() => SetPaidAmount(0));
         HoldBillCommand = new RelayCommand(HoldCurrentBill, () => CartLines.Count > 0);
-        RecallBillCommand = new RelayCommand(RecallLastHeldBill, () => HeldBills.Count > 0);
+        RecallBillCommand = new RelayCommand(RecallLastHeldBill, () => HeldBillCount > 0);
         PrintReceiptCommand = new RelayCommand(() => SetStatus($"Receipt ready for {LastCompletedInvoice}. ESC/POS printing will be wired later."));
+        OpenShiftCommand = new RelayCommand(OpenShift, () => !IsShiftOpen);
+        CloseShiftCommand = new RelayCommand(CloseShift, () => IsShiftOpen && CartLines.Count == 0);
+
+        _ = LoadHeldBillCountAsync();
     }
 
     public ObservableCollection<Product> SearchResults { get; }
@@ -118,12 +133,28 @@ public class PosViewModel : ObservableObject
     public decimal ChangeDue => Math.Max(0, PaidAmount - GrandTotal);
     public int ItemCount => CartLines.Count;
     public decimal TotalQuantity => CartLines.Sum(x => x.Quantity);
-    public int HeldBillCount => HeldBills.Count;
+    public int HeldBillCount
+    {
+        get => _heldBillCount;
+        set
+        {
+            if (SetProperty(ref _heldBillCount, value))
+            {
+                RecallBillCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
     public string PaymentStatus => GrandTotal <= 0
         ? "No active bill"
         : PaidAmount >= GrandTotal
             ? "Ready to complete"
             : $"Due LKR {AmountDue:N2}";
+    public string ShiftStatus => IsShiftOpen
+        ? $"Open since {ShiftOpenedAt:HH:mm} | Bills {ShiftBillCount} | Sales LKR {ShiftSalesTotal:N2}"
+        : "Shift closed";
+    public decimal ExpectedCash => OpeningCash + ShiftCashTotal;
+    public decimal CashVariance => ClosingCash - ExpectedCash;
+    public string ReceiptPreviewText => BuildReceiptPreview();
 
     public string LastCompletedInvoice
     {
@@ -161,6 +192,107 @@ public class PosViewModel : ObservableObject
         set => SetProperty(ref _lastScannedItemStock, value);
     }
 
+    public bool IsShiftOpen
+    {
+        get => _isShiftOpen;
+        set
+        {
+            if (SetProperty(ref _isShiftOpen, value))
+            {
+                OnPropertyChanged(nameof(ShiftStatus));
+                OpenShiftCommand.RaiseCanExecuteChanged();
+                CloseShiftCommand.RaiseCanExecuteChanged();
+                CompleteSaleCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public DateTime? ShiftOpenedAt
+    {
+        get => _shiftOpenedAt;
+        set
+        {
+            if (SetProperty(ref _shiftOpenedAt, value))
+            {
+                OnPropertyChanged(nameof(ShiftStatus));
+            }
+        }
+    }
+
+    public decimal OpeningCash
+    {
+        get => _openingCash;
+        set
+        {
+            if (SetProperty(ref _openingCash, Math.Max(0, value)))
+            {
+                OnPropertyChanged(nameof(ExpectedCash));
+                OnPropertyChanged(nameof(CashVariance));
+            }
+        }
+    }
+
+    public decimal ClosingCash
+    {
+        get => _closingCash;
+        set
+        {
+            if (SetProperty(ref _closingCash, Math.Max(0, value)))
+            {
+                OnPropertyChanged(nameof(CashVariance));
+            }
+        }
+    }
+
+    public decimal ShiftSalesTotal
+    {
+        get => _shiftSalesTotal;
+        set
+        {
+            if (SetProperty(ref _shiftSalesTotal, value))
+            {
+                OnPropertyChanged(nameof(ShiftStatus));
+            }
+        }
+    }
+
+    public decimal ShiftCashTotal
+    {
+        get => _shiftCashTotal;
+        set
+        {
+            if (SetProperty(ref _shiftCashTotal, value))
+            {
+                OnPropertyChanged(nameof(ExpectedCash));
+                OnPropertyChanged(nameof(CashVariance));
+            }
+        }
+    }
+
+    public decimal ShiftCardTotal
+    {
+        get => _shiftCardTotal;
+        set => SetProperty(ref _shiftCardTotal, value);
+    }
+
+    public decimal ShiftQrTotal
+    {
+        get => _shiftQrTotal;
+        set => SetProperty(ref _shiftQrTotal, value);
+    }
+
+    public int ShiftBillCount
+    {
+        get => _shiftBillCount;
+        set
+        {
+            if (SetProperty(ref _shiftBillCount, value))
+            {
+                OnPropertyChanged(nameof(ShiftStatus));
+            }
+        }
+    }
+
     public AsyncRelayCommand SearchCommand { get; }
     public AsyncRelayCommand CompleteSaleCommand { get; }
     public RelayCommand CancelBillCommand { get; }
@@ -181,6 +313,8 @@ public class PosViewModel : ObservableObject
     public RelayCommand HoldBillCommand { get; }
     public RelayCommand RecallBillCommand { get; }
     public RelayCommand PrintReceiptCommand { get; }
+    public RelayCommand OpenShiftCommand { get; }
+    public RelayCommand CloseShiftCommand { get; }
 
     public async Task SearchAndAddAsync()
     {
@@ -277,6 +411,12 @@ public class PosViewModel : ObservableObject
     {
         try
         {
+            if (!IsShiftOpen)
+            {
+                SetStatus("Open cashier shift before completing sales.", true);
+                return;
+            }
+
             var invoice = await _saleService.CompleteSaleAsync(
                 _userId,
                 CartLines.ToList(),
@@ -289,6 +429,7 @@ public class PosViewModel : ObservableObject
 
             LastCompletedInvoice = invoice;
             LastReceiptSummary = $"{invoice} | {ItemCount} items / {TotalQuantity:N0} qty | Total LKR {GrandTotal:N2} | Paid LKR {PaidAmount:N2} | Change LKR {ChangeDue:N2}";
+            ApplyShiftSaleTotals(GrandTotal, SelectedPaymentMethod, PaidAmount);
             CancelBill();
             SetStatus($"Sale completed. Invoice {invoice} saved.");
         }
@@ -330,6 +471,49 @@ public class PosViewModel : ObservableObject
         SetStatus($"{method} payment selected.");
     }
 
+    private void OpenShift()
+    {
+        ShiftOpenedAt = DateTime.Now;
+        IsShiftOpen = true;
+        ClosingCash = 0;
+        ShiftSalesTotal = 0;
+        ShiftCashTotal = 0;
+        ShiftCardTotal = 0;
+        ShiftQrTotal = 0;
+        ShiftBillCount = 0;
+        SetStatus($"Shift opened with LKR {OpeningCash:N2} opening cash.");
+    }
+
+    private void CloseShift()
+    {
+        ClosingCash = ClosingCash <= 0 ? ExpectedCash : ClosingCash;
+        SetStatus($"Shift closed. Expected cash LKR {ExpectedCash:N2}. Actual LKR {ClosingCash:N2}. Variance LKR {CashVariance:N2}.", CashVariance != 0);
+        IsShiftOpen = false;
+        ShiftOpenedAt = null;
+    }
+
+    private void ApplyShiftSaleTotals(decimal saleTotal, PaymentMethod method, decimal paidAmount)
+    {
+        ShiftSalesTotal += saleTotal;
+        ShiftBillCount += 1;
+
+        switch (method)
+        {
+            case PaymentMethod.Cash:
+                ShiftCashTotal += saleTotal;
+                break;
+            case PaymentMethod.Card:
+                ShiftCardTotal += saleTotal;
+                break;
+            case PaymentMethod.QR:
+                ShiftQrTotal += saleTotal;
+                break;
+            case PaymentMethod.Split:
+                ShiftCashTotal += Math.Min(paidAmount, saleTotal);
+                break;
+        }
+    }
+
     private void SetPaidAmount(decimal amount)
     {
         PaidAmount = amount;
@@ -339,49 +523,108 @@ public class PosViewModel : ObservableObject
             GrandTotal > 0 && PaidAmount < GrandTotal);
     }
 
-    private void HoldCurrentBill()
+    private async void HoldCurrentBill()
     {
-        var snapshot = new HeldBillSnapshot(
-            $"HOLD-{DateTime.Now:HHmmss}",
-            DraftBillNumber,
-            SelectedPaymentMethod,
-            PaidAmount,
-            CartLines.Select(CloneLine).ToList());
+        try
+        {
+            await using var db = new PosDbContext();
+            var holdNumber = $"HOLD-{DateTime.Now:yyyyMMdd-HHmmss}";
 
-        HeldBills.Add(snapshot);
-        CancelBill();
-        OnPropertyChanged(nameof(HeldBillCount));
-        RecallBillCommand.RaiseCanExecuteChanged();
-        SetStatus($"{snapshot.HoldNumber} held. Ready for next customer.");
+            db.HeldBills.Add(new HeldBill
+            {
+                HoldNumber = holdNumber,
+                UserId = _userId,
+                HeldAt = DateTime.Now,
+                GrandTotal = GrandTotal,
+                Items = CartLines.Select(line => new HeldBillItem
+                {
+                    ProductId = line.ProductId,
+                    Quantity = line.Quantity,
+                    UnitPrice = line.UnitPrice,
+                    Discount = line.Discount
+                }).ToList()
+            });
+
+            await db.SaveChangesAsync();
+            await LoadHeldBillCountAsync();
+
+            CancelBill();
+            SetStatus($"{holdNumber} held in database. Ready for next customer.");
+        }
+        catch (Exception ex)
+        {
+            SetStatus($"Could not hold bill: {ex.Message}", true);
+        }
     }
 
-    private void RecallLastHeldBill()
+    private async void RecallLastHeldBill()
     {
-        if (HeldBills.Count == 0)
+        try
         {
-            SetStatus("No held bills available.", true);
-            return;
+            await using var db = new PosDbContext();
+            var heldBill = await db.HeldBills
+                .Include(x => x.Items)
+                .ThenInclude(x => x.Product)
+                .OrderByDescending(x => x.HeldAt)
+                .FirstOrDefaultAsync(x => x.UserId == _userId);
+
+            if (heldBill is null)
+            {
+                await LoadHeldBillCountAsync();
+                SetStatus("No held bills available.", true);
+                return;
+            }
+
+            CancelBill();
+            DraftBillNumber = heldBill.HoldNumber;
+            PaidAmount = 0;
+            SelectedPaymentMethod = PaymentMethod.Cash;
+
+            foreach (var item in heldBill.Items)
+            {
+                if (item.Product is null)
+                {
+                    continue;
+                }
+
+                var line = new CartLineViewModel(
+                    item.ProductId,
+                    string.IsNullOrWhiteSpace(item.Product.SKU) ? item.Product.Barcode : item.Product.SKU,
+                    item.Product.Name,
+                    item.UnitPrice,
+                    item.Product.StockQuantity,
+                    item.Quantity,
+                    item.Discount);
+
+                line.PropertyChanged += CartLineChanged;
+                CartLines.Add(line);
+            }
+
+            db.HeldBills.Remove(heldBill);
+            await db.SaveChangesAsync();
+            await LoadHeldBillCountAsync();
+
+            SelectedLine = CartLines.LastOrDefault();
+            RefreshTotals();
+            SetStatus($"{heldBill.HoldNumber} recalled from database.");
         }
-
-        CancelBill();
-        var snapshot = HeldBills[^1];
-        HeldBills.RemoveAt(HeldBills.Count - 1);
-
-        DraftBillNumber = snapshot.DraftBillNumber;
-        SelectedPaymentMethod = snapshot.PaymentMethod;
-        PaidAmount = snapshot.PaidAmount;
-
-        foreach (var line in snapshot.Lines.Select(CloneLine))
+        catch (Exception ex)
         {
-            line.PropertyChanged += CartLineChanged;
-            CartLines.Add(line);
+            SetStatus($"Could not recall bill: {ex.Message}", true);
         }
+    }
 
-        SelectedLine = CartLines.LastOrDefault();
-        RefreshTotals();
-        OnPropertyChanged(nameof(HeldBillCount));
-        RecallBillCommand.RaiseCanExecuteChanged();
-        SetStatus($"{snapshot.HoldNumber} recalled.");
+    private async Task LoadHeldBillCountAsync()
+    {
+        try
+        {
+            await using var db = new PosDbContext();
+            HeldBillCount = await db.HeldBills.CountAsync(x => x.UserId == _userId);
+        }
+        catch
+        {
+            HeldBillCount = 0;
+        }
     }
 
     private void IncreaseQuantity(CartLineViewModel line)
@@ -441,30 +684,34 @@ public class PosViewModel : ObservableObject
         OnPropertyChanged(nameof(ItemCount));
         OnPropertyChanged(nameof(TotalQuantity));
         OnPropertyChanged(nameof(PaymentStatus));
+        OnPropertyChanged(nameof(ReceiptPreviewText));
         CompleteSaleCommand.RaiseCanExecuteChanged();
         CancelBillCommand.RaiseCanExecuteChanged();
         HoldBillCommand.RaiseCanExecuteChanged();
         RecallBillCommand.RaiseCanExecuteChanged();
+        CloseShiftCommand.RaiseCanExecuteChanged();
+    }
+
+    private string BuildReceiptPreview()
+    {
+        var lines = CartLines.Count == 0
+            ? "No active basket."
+            : string.Join(Environment.NewLine, CartLines.Select(x => $"{x.ProductName} x{x.Quantity:N0}  {x.LineTotal:N2}"));
+
+        return $"""
+               Retail-X
+               {DraftBillNumber}
+               ------------------------------
+               {lines}
+               ------------------------------
+               Subtotal      {Subtotal:N2}
+               Discount      {Discount:N2}
+               VAT/Tax       {Tax:N2}
+               TOTAL         {GrandTotal:N2}
+               Paid          {PaidAmount:N2}
+               Change        {ChangeDue:N2}
+               """;
     }
 
     private static string NewDraftBillNumber() => $"DRAFT-{DateTime.Now:yyyyMMdd-HHmmss}";
-
-    private static CartLineViewModel CloneLine(CartLineViewModel line)
-    {
-        return new CartLineViewModel(
-            line.ProductId,
-            line.ItemCode,
-            line.ProductName,
-            line.UnitPrice,
-            line.AvailableStock,
-            line.Quantity,
-            line.Discount);
-    }
-
-    private sealed record HeldBillSnapshot(
-        string HoldNumber,
-        string DraftBillNumber,
-        PaymentMethod PaymentMethod,
-        decimal PaidAmount,
-        List<CartLineViewModel> Lines);
 }

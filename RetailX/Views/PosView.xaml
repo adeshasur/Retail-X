@@ -113,6 +113,7 @@
                             <TextBlock Text="ACTIVE BILL" Foreground="#B9D4DD" FontSize="11" FontWeight="Bold" />
                             <TextBlock Text="{Binding DraftBillNumber}" Foreground="White" FontSize="14" FontWeight="SemiBold" Margin="0,3,0,0" />
                             <TextBlock Text="{Binding PaymentStatus}" Foreground="#BFF4D7" FontSize="13" FontWeight="SemiBold" Margin="0,6,0,0" />
+                            <TextBlock Text="{Binding ShiftStatus}" Foreground="#B9D4DD" FontSize="11" Margin="0,5,0,0" />
                         </StackPanel>
                         <StackPanel Grid.Column="1" HorizontalAlignment="Right">
                             <TextBlock Text="HELD" Foreground="#B9D4DD" FontSize="11" FontWeight="Bold" HorizontalAlignment="Right" />
@@ -316,25 +317,26 @@
                         Padding="16"
                         Style="{StaticResource PanelBorder}">
                     <StackPanel>
-                        <TextBlock Text="SALE ACTIVITY"
+                        <TextBlock Text="RECEIPT PREVIEW"
                                    Style="{StaticResource SmallMetric}" />
-                        <TextBlock Text="{Binding StatusMessage}"
-                                   Margin="0,10,0,0"
-                                   Style="{StaticResource StatusText}"
-                                   TextWrapping="Wrap"
-                                   FontSize="15" />
                         <Border Margin="0,16,0,0"
                                 Padding="12"
                                 Background="{StaticResource SurfaceAltBrush}"
                                 BorderBrush="{StaticResource BorderBrushSoft}"
                                 BorderThickness="1"
                                 CornerRadius="9">
-                            <TextBlock Text="{Binding LastReceiptSummary}"
+                            <TextBlock Text="{Binding ReceiptPreviewText}"
                                        TextWrapping="Wrap"
+                                       FontFamily="Consolas"
                                        FontSize="12"
                                        LineHeight="18"
-                                       Foreground="{StaticResource MutedBrush}" />
+                                       Foreground="{StaticResource InkBrush}" />
                         </Border>
+                        <TextBlock Text="{Binding StatusMessage}"
+                                   Margin="0,12,0,0"
+                                   Style="{StaticResource StatusText}"
+                                   TextWrapping="Wrap"
+                                   FontSize="14" />
                     </StackPanel>
                 </Border>
 
@@ -345,10 +347,38 @@
                         BorderThickness="1"
                         CornerRadius="12">
                     <StackPanel>
-                        <TextBlock Text="FAST CASH"
+                        <TextBlock Text="SHIFT / FAST CASH"
                                    Foreground="#B9D4DD"
                                    FontSize="11"
                                    FontWeight="Bold" />
+                        <Grid Margin="0,10,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0"
+                                     Text="{Binding OpeningCash, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}"
+                                     MinHeight="38"
+                                     FontSize="14"
+                                     HorizontalContentAlignment="Right"
+                                     Margin="0,0,6,0" />
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding ClosingCash, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}"
+                                     MinHeight="38"
+                                     FontSize="14"
+                                     HorizontalContentAlignment="Right"
+                                     Margin="6,0,0,0" />
+                        </Grid>
+                        <UniformGrid Columns="2" Rows="1" Margin="0,8,0,0">
+                            <Button Content="Open Shift" Command="{Binding OpenShiftCommand}" MinHeight="40" Padding="6" Margin="0,0,6,0" />
+                            <Button Content="Close Shift" Command="{Binding CloseShiftCommand}" MinHeight="40" Padding="6" Margin="6,0,0,0" />
+                        </UniformGrid>
+                        <TextBlock Margin="0,8,0,0" Foreground="#B9D4DD" FontSize="11">
+                            <Run Text="Expected Cash: " />
+                            <Run Text="{Binding ExpectedCash, Mode=OneWay, StringFormat=LKR {0:N2}}" />
+                            <Run Text=" | Variance: " />
+                            <Run Text="{Binding CashVariance, Mode=OneWay, StringFormat=LKR {0:N2}}" />
+                        </TextBlock>
                         <UniformGrid Columns="2" Rows="3" Margin="0,10,0,0">
                             <Button Content="Exact" Command="{Binding ExactCashCommand}" MinHeight="40" Padding="6" Margin="0,0,6,6" />
                             <Button Content="+500" Command="{Binding AddCash500Command}" MinHeight="40" Padding="6" Margin="6,0,0,6" />
@@ -447,6 +477,24 @@
                         <TextBlock Text="{Binding SelectedPaymentMethod, StringFormat=PAYMENT: {0}}"
                                    Style="{StaticResource SmallMetric}"
                                    Margin="0,0,0,8" />
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Padding="10" Background="{StaticResource SurfaceAltBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="9" Margin="0,0,5,0">
+                                <StackPanel>
+                                    <TextBlock Text="SHIFT SALES" Style="{StaticResource SmallMetric}" />
+                                    <TextBlock Text="{Binding ShiftSalesTotal, StringFormat=LKR {0:N2}}" FontWeight="Bold" Foreground="{StaticResource InkBrush}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="1" Padding="10" Background="{StaticResource SurfaceAltBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="9" Margin="5,0,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="CASH TOTAL" Style="{StaticResource SmallMetric}" />
+                                    <TextBlock Text="{Binding ShiftCashTotal, StringFormat=LKR {0:N2}}" FontWeight="Bold" Foreground="{StaticResource InkBrush}" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
                         <UniformGrid Columns="2" Rows="2">
                             <Button Content="Cash  F8" Command="{Binding SetCashCommand}" Style="{StaticResource PaymentButton}" Margin="0,0,7,7" />
                             <Button Content="Card" Command="{Binding SetCardCommand}" Style="{StaticResource PaymentButton}" Margin="7,0,0,7" />
