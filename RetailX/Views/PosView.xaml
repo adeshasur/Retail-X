@@ -9,7 +9,7 @@
             <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
             <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="CornerRadius" Value="12" />
         </Style>
 
         <Style x:Key="PaymentButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
@@ -33,7 +33,7 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid Margin="16">
+    <Grid Margin="18">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="390" />
@@ -47,18 +47,26 @@
         <Border Grid.Column="0"
                 Grid.Row="0"
                 Style="{StaticResource PanelBorder}"
-                Padding="16"
-                Margin="0,0,14,14">
+                Padding="18"
+                Margin="0,0,16,16">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="150" />
                 </Grid.ColumnDefinitions>
                 <StackPanel>
-                    <TextBlock Text="SCAN BARCODE / SEARCH PRODUCT"
-                               FontSize="12"
-                               FontWeight="Bold"
-                               Foreground="{StaticResource MutedBrush}" />
+                    <DockPanel>
+                        <TextBlock Text="SCAN BARCODE / SEARCH PRODUCT"
+                                   DockPanel.Dock="Left"
+                                   FontSize="12"
+                                   FontWeight="Bold"
+                                   Foreground="{StaticResource MutedBrush}" />
+                        <TextBlock Text="F1"
+                                   DockPanel.Dock="Right"
+                                   FontSize="12"
+                                   FontWeight="Bold"
+                                   Foreground="{StaticResource AccentBrush}" />
+                    </DockPanel>
                     <TextBox x:Name="SearchBox"
                              Margin="0,6,0,0"
                              FontSize="24"
@@ -75,7 +83,7 @@
             </Grid>
         </Border>
 
-        <Grid Grid.Column="0" Grid.Row="1" Margin="0,0,14,0">
+        <Grid Grid.Column="0" Grid.Row="1" Margin="0,0,16,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
@@ -86,8 +94,8 @@
                       ItemsSource="{Binding CartLines}"
                       SelectedItem="{Binding SelectedLine, Mode=TwoWay}"
                       FontSize="15"
-                      RowHeight="54"
-                      AlternatingRowBackground="#F8FBFD"
+                      RowHeight="56"
+                      AlternatingRowBackground="#F7FBFC"
                       SelectionMode="Single"
                       SelectionUnit="FullRow"
                       CanUserResizeRows="False"
@@ -99,6 +107,8 @@
                         <Setter Property="FontSize" Value="13" />
                         <Setter Property="FontWeight" Value="Bold" />
                         <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+                        <Setter Property="Background" Value="#F3F8FA" />
+                        <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
                     </Style>
                 </DataGrid.ColumnHeaderStyle>
                 <DataGrid.Columns>
@@ -193,7 +203,7 @@
                 Grid.Row="0"
                 Grid.RowSpan="3"
                 Style="{StaticResource PanelBorder}"
-                Padding="18">
+                Padding="20">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -204,26 +214,31 @@
                 </Grid.RowDefinitions>
 
                 <Border Grid.Row="0"
-                        Padding="18"
-                        Background="#ECF8F3"
-                        BorderBrush="#C7E8D9"
+                        Padding="20"
+                        BorderBrush="#BFE7D3"
                         BorderThickness="1"
-                        CornerRadius="8"
-                        Margin="0,0,0,14">
+                        CornerRadius="12"
+                        Margin="0,0,0,16">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#E7F8F0" Offset="0" />
+                            <GradientStop Color="#F6FFFB" Offset="1" />
+                        </LinearGradientBrush>
+                    </Border.Background>
                     <StackPanel>
                         <TextBlock Text="GRAND TOTAL"
                                    Foreground="{StaticResource AccentGreenBrush}"
                                    FontSize="13"
                                    FontWeight="Bold" />
                         <TextBlock Text="{Binding GrandTotal, StringFormat=LKR {0:N2}}"
-                                   FontSize="46"
+                                   FontSize="48"
                                    FontWeight="Bold"
                                    Foreground="{StaticResource AccentGreenBrush}"
                                    Margin="0,2,0,0" />
                     </StackPanel>
                 </Border>
 
-                <Grid Grid.Row="1" Margin="0,0,0,14">
+                <Grid Grid.Row="1" Margin="0,0,0,16">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
@@ -260,7 +275,7 @@
                                Foreground="{StaticResource AccentBrush}" />
                 </Grid>
 
-                <StackPanel Grid.Row="2" Margin="0,0,0,14">
+                <StackPanel Grid.Row="2" Margin="0,0,0,16">
                     <TextBlock Text="{Binding SelectedPaymentMethod, StringFormat=PAYMENT METHOD: {0}}"
                                FontSize="12"
                                FontWeight="Bold"
@@ -284,11 +299,11 @@
                 </UniformGrid>
 
                 <Border Grid.Row="4"
-                        Padding="12"
-                        Background="#F6F9FC"
+                        Padding="14"
+                        Background="{StaticResource SurfaceAltBrush}"
                         BorderBrush="{StaticResource BorderBrushSoft}"
                         BorderThickness="1"
-                        CornerRadius="8">
+                        CornerRadius="10">
                     <TextBlock Text="{Binding StatusMessage}"
                                Style="{StaticResource StatusText}"
                                TextWrapping="Wrap"
@@ -301,7 +316,7 @@
                 Grid.Row="2"
                 Style="{StaticResource PanelBorder}"
                 Padding="12"
-                Margin="0,12,14,0">
+                Margin="0,14,16,0">
             <TextBlock Text="F1 Scan/Search   F2 Edit Qty   F3 Edit Discount   F4 Hold   F5 Complete   F8 Cash   Esc Cancel"
                        Foreground="{StaticResource MutedBrush}"
                        FontWeight="SemiBold" />

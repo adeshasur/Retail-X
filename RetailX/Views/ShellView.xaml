@@ -1,36 +1,83 @@
 <UserControl x:Class="RetailX.Views.ShellView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <Style x:Key="SidebarButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Padding" Value="16,11" />
+            <Setter Property="MinHeight" Value="46" />
+            <Setter Property="Background" Value="#173044" />
+            <Setter Property="BorderBrush" Value="#25445B" />
+            <Setter Property="Foreground" Value="#EAF6F8" />
+            <Setter Property="FontSize" Value="14" />
+        </Style>
+    </UserControl.Resources>
+
     <Grid Background="{StaticResource AppBackgroundBrush}">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="220" />
+            <ColumnDefinition Width="236" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" Background="#14202C">
+        <Border Grid.Column="0">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                    <GradientStop Color="#102234" Offset="0" />
+                    <GradientStop Color="#122C3E" Offset="0.62" />
+                    <GradientStop Color="#0B1C2C" Offset="1" />
+                </LinearGradientBrush>
+            </Border.Background>
             <DockPanel LastChildFill="True">
-                <StackPanel DockPanel.Dock="Top" Margin="18,20">
-                    <TextBlock Text="Retail-X"
-                               FontSize="27"
-                               FontWeight="Bold"
-                               Foreground="White" />
-                    <TextBlock Text="POS by CodaWix™"
-                               Foreground="#B9C9D7"
-                               FontSize="13" />
+                <StackPanel DockPanel.Dock="Top" Margin="18,22">
+                    <DockPanel>
+                        <Border Width="46"
+                                Height="46"
+                                Background="#123F55"
+                                BorderBrush="#2A6074"
+                                BorderThickness="1"
+                                CornerRadius="10"
+                                DockPanel.Dock="Left"
+                                Margin="0,0,12,0">
+                            <TextBlock Text="RX"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Center"
+                                       FontSize="17"
+                                       FontWeight="Bold"
+                                       Foreground="White" />
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Retail-X"
+                                       FontSize="25"
+                                       FontWeight="Bold"
+                                       Foreground="White" />
+                            <TextBlock Text="POS by CodaWix™"
+                                       Foreground="#B9D4DD"
+                                       FontSize="12" />
+                        </StackPanel>
+                    </DockPanel>
                 </StackPanel>
 
-                <StackPanel DockPanel.Dock="Bottom" Margin="14">
-                    <TextBlock Text="{Binding CashierName}" Foreground="White" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding UserRole}" Foreground="#B9C9D7" Margin="0,2,0,12" />
-                    <Button Content="Logout" Command="{Binding LogoutCommand}" />
+                <StackPanel DockPanel.Dock="Bottom" Margin="14,14,14,18">
+                    <Border Padding="14"
+                            Background="#173044"
+                            BorderBrush="#25445B"
+                            BorderThickness="1"
+                            CornerRadius="10"
+                            Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="{Binding CashierName}" Foreground="White" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding UserRole}" Foreground="#B9D4DD" Margin="0,2,0,0" FontSize="12" />
+                        </StackPanel>
+                    </Border>
+                    <Button Content="Logout" Command="{Binding LogoutCommand}" Style="{StaticResource SidebarButton}" />
                 </StackPanel>
 
-                <StackPanel Margin="12,92,12,12">
-                    <Button Content="Cashier POS" Command="{Binding NavigatePosCommand}" Margin="0,0,0,8" />
-                    <Button Content="Products" Command="{Binding NavigateProductsCommand}" Margin="0,0,0,8" />
-                    <Button Content="Inventory" Command="{Binding NavigateInventoryCommand}" Margin="0,0,0,8" />
-                    <Button Content="Reports" Command="{Binding NavigateReportsCommand}" Margin="0,0,0,8" />
-                    <Button Content="Settings" Command="{Binding NavigateSettingsCommand}" />
+                <StackPanel Margin="14,94,14,12">
+                    <Button Content="Cashier POS" Command="{Binding NavigatePosCommand}" Style="{StaticResource SidebarButton}" Margin="0,0,0,8" />
+                    <Button Content="Products" Command="{Binding NavigateProductsCommand}" Style="{StaticResource SidebarButton}" Margin="0,0,0,8" />
+                    <Button Content="Inventory" Command="{Binding NavigateInventoryCommand}" Style="{StaticResource SidebarButton}" Margin="0,0,0,8" />
+                    <Button Content="Reports" Command="{Binding NavigateReportsCommand}" Style="{StaticResource SidebarButton}" Margin="0,0,0,8" />
+                    <Button Content="Settings" Command="{Binding NavigateSettingsCommand}" Style="{StaticResource SidebarButton}" />
                 </StackPanel>
             </DockPanel>
         </Border>
@@ -46,10 +93,10 @@
                     Background="{StaticResource SurfaceBrush}"
                     BorderBrush="{StaticResource BorderBrushSoft}"
                     BorderThickness="0,0,0,1"
-                    Padding="22,0">
+                    Padding="24,0">
                 <DockPanel VerticalAlignment="Center">
                     <StackPanel DockPanel.Dock="Left">
-                        <TextBlock Text="{Binding AppName}" FontSize="18" FontWeight="Bold" Foreground="{StaticResource InkBrush}" />
+                        <TextBlock Text="{Binding AppName}" FontSize="20" FontWeight="Bold" Foreground="{StaticResource InkBrush}" />
                         <TextBlock Text="{Binding BranchName}" FontSize="12" Foreground="{StaticResource MutedBrush}" />
                     </StackPanel>
                     <StackPanel DockPanel.Dock="Right" HorizontalAlignment="Right">

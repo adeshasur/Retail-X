@@ -16,7 +16,8 @@ public static class DatabaseInitializer
             db.AppSettings.Add(new AppSetting());
         }
 
-        if (!await db.Users.AnyAsync())
+        var adminUser = await db.Users.FirstOrDefaultAsync(x => x.Username == "admin");
+        if (adminUser is null)
         {
             db.Users.Add(new User
             {
@@ -26,6 +27,13 @@ public static class DatabaseInitializer
                 Role = UserRole.Admin,
                 IsActive = true
             });
+        }
+        else
+        {
+            adminUser.FullName = "System Administrator";
+            adminUser.PasswordHash = PasswordHasher.Hash("admin123");
+            adminUser.Role = UserRole.Admin;
+            adminUser.IsActive = true;
         }
 
         if (!await db.Categories.AnyAsync())
