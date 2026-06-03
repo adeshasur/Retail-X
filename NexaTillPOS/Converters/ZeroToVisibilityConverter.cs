@@ -1,0 +1,23 @@
+using System.Globalization;
+using System.Windows;
+using System.Windows.Data;
+
+namespace NexaTillPOS.Converters;
+
+public class ZeroToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value switch
+        {
+            int count => count > 0 ? Visibility.Visible : Visibility.Collapsed,
+            string text => string.IsNullOrWhiteSpace(text) ? Visibility.Collapsed : Visibility.Visible,
+            _ => Visibility.Collapsed
+        };
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotSupportedException();
+    }
+}
