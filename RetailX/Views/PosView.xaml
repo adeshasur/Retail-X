@@ -524,5 +524,96 @@
                        Foreground="{StaticResource MutedBrush}"
                        FontWeight="SemiBold" />
         </Border>
+
+        <Grid Grid.RowSpan="3"
+              Background="#990B1C2C"
+              Visibility="{Binding IsQuantityDialogOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Border Width="430"
+                    Padding="24"
+                    Background="{StaticResource SurfaceBrush}"
+                    BorderBrush="{StaticResource BorderBrushSoft}"
+                    BorderThickness="1"
+                    CornerRadius="14"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                <StackPanel>
+                    <TextBlock Text="Change Quantity"
+                               FontSize="25"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource InkBrush}" />
+                    <TextBlock Text="{Binding SelectedLine.ProductName}"
+                               Margin="0,4,0,18"
+                               TextWrapping="Wrap"
+                               Foreground="{StaticResource MutedBrush}" />
+                    <TextBlock Text="Quantity" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" />
+                    <TextBox Text="{Binding QuantityInput, UpdateSourceTrigger=PropertyChanged}"
+                             Margin="0,8,0,18"
+                             MinHeight="54"
+                             FontSize="24"
+                             FontWeight="Bold"
+                             HorizontalContentAlignment="Center" />
+                    <UniformGrid Columns="2" Rows="1">
+                        <Button Content="Cancel"
+                                Command="{Binding CloseQuantityDialogCommand}"
+                                Margin="0,0,8,0" />
+                        <Button Content="Apply Quantity"
+                                Command="{Binding ApplyQuantityCommand}"
+                                Style="{StaticResource PrimaryButton}"
+                                Margin="8,0,0,0" />
+                    </UniformGrid>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Grid Grid.RowSpan="3"
+              Background="#990B1C2C"
+              Visibility="{Binding IsDiscountDialogOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Border Width="460"
+                    Padding="24"
+                    Background="{StaticResource SurfaceBrush}"
+                    BorderBrush="{StaticResource BorderBrushSoft}"
+                    BorderThickness="1"
+                    CornerRadius="14"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                <StackPanel>
+                    <TextBlock Text="Apply Discount"
+                               FontSize="25"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource InkBrush}" />
+                    <TextBlock Text="{Binding SelectedLine.ProductName}"
+                               Margin="0,4,0,18"
+                               TextWrapping="Wrap"
+                               Foreground="{StaticResource MutedBrush}" />
+                    <TextBlock Text="Discount Amount (LKR)" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" />
+                    <TextBox Text="{Binding DiscountInput, UpdateSourceTrigger=PropertyChanged}"
+                             Margin="0,8,0,12"
+                             MinHeight="54"
+                             FontSize="24"
+                             FontWeight="Bold"
+                             HorizontalContentAlignment="Center" />
+                    <Border Padding="12"
+                            Margin="0,0,0,18"
+                            Background="#FFF7EA"
+                            BorderBrush="#F0D7A6"
+                            BorderThickness="1"
+                            CornerRadius="9">
+                        <TextBlock Text="Discounts above 20% are treated as manager-approval actions in this development build."
+                                   TextWrapping="Wrap"
+                                   FontSize="12"
+                                   Foreground="#7B5A13" />
+                    </Border>
+                    <UniformGrid Columns="2" Rows="1">
+                        <Button Content="Cancel"
+                                Command="{Binding CloseDiscountDialogCommand}"
+                                Margin="0,0,8,0" />
+                        <Button Content="Apply Discount"
+                                Command="{Binding ApplyDiscountCommand}"
+                                Style="{StaticResource PrimaryButton}"
+                                Margin="8,0,0,0" />
+                    </UniformGrid>
+                </StackPanel>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>

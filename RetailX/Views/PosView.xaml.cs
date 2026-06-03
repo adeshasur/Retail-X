@@ -40,14 +40,20 @@ public partial class PosView : UserControl
 
         if (e.Key == Key.F2)
         {
-            BeginCartEdit(3);
+            if (DataContext is PosViewModel viewModel)
+            {
+                viewModel.OpenQuantityDialogCommand.Execute(null);
+            }
             e.Handled = true;
             return;
         }
 
         if (e.Key == Key.F3)
         {
-            BeginCartEdit(4);
+            if (DataContext is PosViewModel viewModel)
+            {
+                viewModel.OpenDiscountDialogCommand.Execute(null);
+            }
             e.Handled = true;
         }
     }

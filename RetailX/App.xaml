@@ -7,6 +7,7 @@
              StartupUri="MainWindow.xaml">
     <Application.Resources>
         <converters:ZeroToVisibilityConverter x:Key="ZeroToVisibilityConverter" />
+        <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
 
         <DataTemplate DataType="{x:Type viewModels:LoginViewModel}">
             <views:LoginView />

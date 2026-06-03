@@ -35,6 +35,10 @@ public class PosViewModel : ObservableObject
     private decimal _shiftQrTotal;
     private int _shiftBillCount;
     private int _heldBillCount;
+    private bool _isQuantityDialogOpen;
+    private bool _isDiscountDialogOpen;
+    private decimal _quantityInput = 1;
+    private decimal _discountInput;
 
     public PosViewModel(ProductService productService, SaleService saleService, int userId)
     {
@@ -66,6 +70,12 @@ public class PosViewModel : ObservableObject
         PrintReceiptCommand = new RelayCommand(() => SetStatus($"Receipt ready for {LastCompletedInvoice}. ESC/POS printing will be wired later."));
         OpenShiftCommand = new RelayCommand(OpenShift, () => !IsShiftOpen);
         CloseShiftCommand = new RelayCommand(CloseShift, () => IsShiftOpen && CartLines.Count == 0);
+        OpenQuantityDialogCommand = new RelayCommand(OpenQuantityDialog, () => SelectedLine is not null);
+        ApplyQuantityCommand = new RelayCommand(ApplyQuantityDialog);
+        CloseQuantityDialogCommand = new RelayCommand(() => IsQuantityDialogOpen = false);
+        OpenDiscountDialogCommand = new RelayCommand(OpenDiscountDialog, () => SelectedLine is not null);
+        ApplyDiscountCommand = new RelayCommand(ApplyDiscountDialog);
+        CloseDiscountDialogCommand = new RelayCommand(() => IsDiscountDialogOpen = false);
 
         _ = LoadHeldBillCountAsync();
     }
@@ -121,7 +131,14 @@ public class PosViewModel : ObservableObject
     public CartLineViewModel? SelectedLine
     {
         get => _selectedLine;
-        set => SetProperty(ref _selectedLine, value);
+        set
+        {
+            if (SetProperty(ref _selectedLine, value))
+            {
+                OpenQuantityDialogCommand.RaiseCanExecuteChanged();
+                OpenDiscountDialogCommand.RaiseCanExecuteChanged();
+            }
+        }
     }
 
     public decimal Subtotal => CartLines.Sum(x => x.UnitPrice * x.Quantity);
@@ -155,6 +172,30 @@ public class PosViewModel : ObservableObject
     public decimal ExpectedCash => OpeningCash + ShiftCashTotal;
     public decimal CashVariance => ClosingCash - ExpectedCash;
     public string ReceiptPreviewText => BuildReceiptPreview();
+
+    public bool IsQuantityDialogOpen
+    {
+        get => _isQuantityDialogOpen;
+        set => SetProperty(ref _isQuantityDialogOpen, value);
+    }
+
+    public bool IsDiscountDialogOpen
+    {
+        get => _isDiscountDialogOpen;
+        set => SetProperty(ref _isDiscountDialogOpen, value);
+    }
+
+    public decimal QuantityInput
+    {
+        get => _quantityInput;
+        set => SetProperty(ref _quantityInput, Math.Max(1, value));
+    }
+
+    public decimal DiscountInput
+    {
+        get => _discountInput;
+        set => SetProperty(ref _discountInput, Math.Max(0, value));
+    }
 
     public string LastCompletedInvoice
     {
@@ -315,6 +356,12 @@ public class PosViewModel : ObservableObject
     public RelayCommand PrintReceiptCommand { get; }
     public RelayCommand OpenShiftCommand { get; }
     public RelayCommand CloseShiftCommand { get; }
+    public RelayCommand OpenQuantityDialogCommand { get; }
+    public RelayCommand ApplyQuantityCommand { get; }
+    public RelayCommand CloseQuantityDialogCommand { get; }
+    public RelayCommand OpenDiscountDialogCommand { get; }
+    public RelayCommand ApplyDiscountCommand { get; }
+    public RelayCommand CloseDiscountDialogCommand { get; }
 
     public async Task SearchAndAddAsync()
     {
@@ -512,6 +559,86 @@ public class PosViewModel : ObservableObject
                 ShiftCashTotal += Math.Min(paidAmount, saleTotal);
                 break;
         }
+    }
+
+    private void OpenQuantityDialog()
+    {
+        if (SelectedLine is null)
+        {
+            SetStatus("Select an item before changing quantity.", true);
+            return;
+        }
+
+        QuantityInput = SelectedLine.Quantity;
+        IsDiscountDialogOpen = false;
+        IsQuantityDialogOpen = true;
+        SetStatus($"Editing quantity for {SelectedLine.ProductName}.");
+    }
+
+    private void ApplyQuantityDialog()
+    {
+        if (SelectedLine is null)
+        {
+            IsQuantityDialogOpen = false;
+            SetStatus("No item selected for quantity change.", true);
+            return;
+        }
+
+        if (QuantityInput > SelectedLine.AvailableStock)
+        {
+            SetStatus($"Stock not available: only {SelectedLine.AvailableStock:N0} available for {SelectedLine.ProductName}.", true);
+            return;
+        }
+
+        SelectedLine.Quantity = QuantityInput;
+        IsQuantityDialogOpen = false;
+        RefreshTotals();
+        SetStatus($"{SelectedLine.ProductName} quantity set to {SelectedLine.Quantity:N0}.");
+    }
+
+    private void OpenDiscountDialog()
+    {
+        if (SelectedLine is null)
+        {
+            SetStatus("Select an item before applying discount.", true);
+            return;
+        }
+
+        DiscountInput = SelectedLine.Discount;
+        IsQuantityDialogOpen = false;
+        IsDiscountDialogOpen = true;
+        SetStatus($"Editing discount for {SelectedLine.ProductName}.");
+    }
+
+    private void ApplyDiscountDialog()
+    {
+        if (SelectedLine is null)
+        {
+            IsDiscountDialogOpen = false;
+            SetStatus("No item selected for discount.", true);
+            return;
+        }
+
+        var lineGross = SelectedLine.UnitPrice * SelectedLine.Quantity;
+        if (DiscountInput > lineGross)
+        {
+            SetStatus("Discount cannot exceed item line total.", true);
+            return;
+        }
+
+        var managerApprovalThreshold = lineGross * 0.20m;
+        if (DiscountInput > managerApprovalThreshold)
+        {
+            SetStatus("Manager approval required for discounts above 20%. Placeholder approval accepted for development.", true);
+        }
+        else
+        {
+            SetStatus($"{SelectedLine.ProductName} discount applied.");
+        }
+
+        SelectedLine.Discount = DiscountInput;
+        IsDiscountDialogOpen = false;
+        RefreshTotals();
     }
 
     private void SetPaidAmount(decimal amount)
