@@ -12,6 +12,7 @@ public class PosViewModel : ObservableObject
     private readonly int _userId;
     private string _searchText = string.Empty;
     private string _statusMessage = "Ready for barcode scan or product search.";
+    private bool _isStatusError;
     private decimal _paidAmount;
     private PaymentMethod _selectedPaymentMethod = PaymentMethod.Cash;
     private CartLineViewModel? _selectedLine;
@@ -34,9 +35,11 @@ public class PosViewModel : ObservableObject
         AddSelectedProductCommand = new RelayCommand<Product>(AddProduct);
         RemoveLineCommand = new RelayCommand<CartLineViewModel>(RemoveLine);
         VoidSelectedLineCommand = new RelayCommand(VoidSelectedLine);
-        HoldBillCommand = new RelayCommand(() => StatusMessage = "Hold bill is planned for the next milestone.");
-        RecallBillCommand = new RelayCommand(() => StatusMessage = "Recall bill is planned for the next milestone.");
-        PrintReceiptCommand = new RelayCommand(() => StatusMessage = "Receipt printing via ESC/POS is planned for later.");
+        IncreaseQuantityCommand = new RelayCommand<CartLineViewModel>(IncreaseQuantity);
+        DecreaseQuantityCommand = new RelayCommand<CartLineViewModel>(DecreaseQuantity);
+        HoldBillCommand = new RelayCommand(() => SetStatus("Hold bill is planned for the next milestone."));
+        RecallBillCommand = new RelayCommand(() => SetStatus("Recall bill is planned for the next milestone."));
+        PrintReceiptCommand = new RelayCommand(() => SetStatus("Receipt printing via ESC/POS is planned for later."));
     }
 
     public ObservableCollection<Product> SearchResults { get; }
@@ -52,6 +55,12 @@ public class PosViewModel : ObservableObject
     {
         get => _statusMessage;
         set => SetProperty(ref _statusMessage, value);
+    }
+
+    public bool IsStatusError
+    {
+        get => _isStatusError;
+        set => SetProperty(ref _isStatusError, value);
     }
 
     public decimal PaidAmount
@@ -94,6 +103,8 @@ public class PosViewModel : ObservableObject
     public RelayCommand<Product> AddSelectedProductCommand { get; }
     public RelayCommand<CartLineViewModel> RemoveLineCommand { get; }
     public RelayCommand VoidSelectedLineCommand { get; }
+    public RelayCommand<CartLineViewModel> IncreaseQuantityCommand { get; }
+    public RelayCommand<CartLineViewModel> DecreaseQuantityCommand { get; }
     public RelayCommand HoldBillCommand { get; }
     public RelayCommand RecallBillCommand { get; }
     public RelayCommand PrintReceiptCommand { get; }
@@ -102,7 +113,7 @@ public class PosViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(SearchText))
         {
-            StatusMessage = "Scan barcode or enter item name/SKU.";
+            SetStatus("Scan barcode or enter item name/SKU.", true);
             return;
         }
 
@@ -122,7 +133,7 @@ public class PosViewModel : ObservableObject
             SearchResults.Add(result);
         }
 
-        StatusMessage = results.Count == 0 ? "No matching product found." : "Select a product from the search results.";
+        SetStatus(results.Count == 0 ? "No matching product found." : "Select a product from the search results.", results.Count == 0);
     }
 
     public void AddProduct(Product product)
@@ -132,25 +143,27 @@ public class PosViewModel : ObservableObject
         {
             if (existing.Quantity + 1 > existing.AvailableStock)
             {
-                StatusMessage = $"Only {existing.AvailableStock:N0} available for {existing.ProductName}.";
+                SetStatus($"Stock not available: only {existing.AvailableStock:N0} available for {existing.ProductName}.", true);
                 return;
             }
 
             existing.Quantity += 1;
-            StatusMessage = $"{existing.ProductName} quantity updated.";
+            SelectedLine = existing;
+            SetStatus($"{existing.ProductName} quantity updated to {existing.Quantity:N0}.");
         }
         else
         {
             if (product.StockQuantity <= 0)
             {
-                StatusMessage = $"{product.Name} is out of stock.";
+                SetStatus($"Stock not available: {product.Name} is out of stock.", true);
                 return;
             }
 
             var line = new CartLineViewModel(product);
             line.PropertyChanged += CartLineChanged;
             CartLines.Add(line);
-            StatusMessage = $"{product.Name} added.";
+            SelectedLine = line;
+            SetStatus($"{product.Name} added.");
         }
 
         if (PaidAmount < GrandTotal)
@@ -165,15 +178,20 @@ public class PosViewModel : ObservableObject
     {
         line.PropertyChanged -= CartLineChanged;
         CartLines.Remove(line);
+        if (SelectedLine == line)
+        {
+            SelectedLine = CartLines.LastOrDefault();
+        }
+
         RefreshTotals();
-        StatusMessage = $"{line.ProductName} removed.";
+        SetStatus($"{line.ProductName} removed.");
     }
 
     private void VoidSelectedLine()
     {
         if (SelectedLine is null)
         {
-            StatusMessage = "Select an item to void.";
+            SetStatus("Select an item to void.", true);
             return;
         }
 
@@ -197,11 +215,11 @@ public class PosViewModel : ObservableObject
                 PaidAmount);
 
             CancelBill();
-            StatusMessage = $"Sale completed. Invoice {invoice} saved.";
+            SetStatus($"Sale completed. Invoice {invoice} saved.");
         }
         catch (Exception ex)
         {
-            StatusMessage = ex.Message;
+            SetStatus(ex.Message, true);
         }
     }
 
@@ -216,23 +234,61 @@ public class PosViewModel : ObservableObject
         SearchResults.Clear();
         SearchText = string.Empty;
         PaidAmount = 0;
+        SelectedLine = null;
         RefreshTotals();
-        StatusMessage = "Bill cleared. Ready for next customer.";
+        SetStatus("Bill cleared. Ready for next customer.");
     }
 
     private void SelectPayment(PaymentMethod method)
     {
         SelectedPaymentMethod = method;
         PaidAmount = GrandTotal;
-        StatusMessage = $"{method} payment selected.";
+        SetStatus($"{method} payment selected.");
+    }
+
+    private void IncreaseQuantity(CartLineViewModel line)
+    {
+        SelectedLine = line;
+        if (line.Quantity + 1 > line.AvailableStock)
+        {
+            SetStatus($"Stock not available: only {line.AvailableStock:N0} available for {line.ProductName}.", true);
+            return;
+        }
+
+        line.Quantity += 1;
+        SetStatus($"{line.ProductName} quantity updated to {line.Quantity:N0}.");
+    }
+
+    private void DecreaseQuantity(CartLineViewModel line)
+    {
+        SelectedLine = line;
+        if (line.Quantity <= 1)
+        {
+            RemoveLine(line);
+            return;
+        }
+
+        line.Quantity -= 1;
+        SetStatus($"{line.ProductName} quantity updated to {line.Quantity:N0}.");
     }
 
     private void CartLineChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(CartLineViewModel.Quantity) or nameof(CartLineViewModel.Discount) or nameof(CartLineViewModel.LineTotal))
         {
+            if (sender is CartLineViewModel line && line.Quantity >= line.AvailableStock)
+            {
+                SetStatus($"Stock limit reached for {line.ProductName}: {line.AvailableStock:N0} available.", true);
+            }
+
             RefreshTotals();
         }
+    }
+
+    private void SetStatus(string message, bool isError = false)
+    {
+        StatusMessage = message;
+        IsStatusError = isError;
     }
 
     private void RefreshTotals()

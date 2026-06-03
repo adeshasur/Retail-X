@@ -27,9 +27,13 @@ public class CartLineViewModel : ObservableObject
         get => _quantity;
         set
         {
-            if (SetProperty(ref _quantity, Math.Max(1, value)))
+            var requestedQuantity = Math.Max(1, value);
+            var safeQuantity = AvailableStock > 0 ? Math.Min(requestedQuantity, AvailableStock) : requestedQuantity;
+
+            if (SetProperty(ref _quantity, safeQuantity))
             {
                 OnPropertyChanged(nameof(LineTotal));
+                OnPropertyChanged(nameof(IsLowStockLine));
             }
         }
     }
@@ -47,4 +51,6 @@ public class CartLineViewModel : ObservableObject
     }
 
     public decimal LineTotal => Math.Max(0, UnitPrice * Quantity - Discount);
+
+    public bool IsLowStockLine => Quantity >= AvailableStock;
 }

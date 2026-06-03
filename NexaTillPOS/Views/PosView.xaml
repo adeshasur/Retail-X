@@ -2,19 +2,41 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:viewModels="clr-namespace:NexaTillPOS.ViewModels"
-             Loaded="OnLoaded">
-    <UserControl.InputBindings>
-        <KeyBinding Key="F1" Command="{Binding SearchCommand}" />
-        <KeyBinding Key="F4" Command="{Binding HoldBillCommand}" />
-        <KeyBinding Key="F5" Command="{Binding CompleteSaleCommand}" />
-        <KeyBinding Key="F8" Command="{Binding SetCashCommand}" />
-        <KeyBinding Key="Escape" Command="{Binding CancelBillCommand}" />
-    </UserControl.InputBindings>
+             Loaded="OnLoaded"
+             PreviewKeyDown="OnPreviewKeyDown">
+    <UserControl.Resources>
+        <Style x:Key="PanelBorder" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+        </Style>
 
-    <Grid Margin="18">
+        <Style x:Key="PaymentButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="MinHeight" Value="58" />
+            <Setter Property="FontSize" Value="16" />
+        </Style>
+
+        <Style x:Key="ActionButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="MinHeight" Value="52" />
+            <Setter Property="FontSize" Value="15" />
+        </Style>
+
+        <Style x:Key="StatusText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsStatusError}" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource DangerBrush}" />
+                    <Setter Property="FontWeight" Value="SemiBold" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="16">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="350" />
+            <ColumnDefinition Width="390" />
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -24,27 +46,30 @@
 
         <Border Grid.Column="0"
                 Grid.Row="0"
-                Padding="14"
-                Background="{StaticResource SurfaceBrush}"
-                BorderBrush="{StaticResource BorderBrushSoft}"
-                BorderThickness="1"
-                CornerRadius="8"
+                Style="{StaticResource PanelBorder}"
+                Padding="16"
                 Margin="0,0,14,14">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="140" />
+                    <ColumnDefinition Width="150" />
                 </Grid.ColumnDefinitions>
-                <TextBox x:Name="SearchBox"
-                         Grid.Column="0"
-                         FontSize="22"
-                         FontWeight="SemiBold"
-                         MinHeight="54"
-                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                         KeyDown="OnSearchKeyDown" />
+                <StackPanel>
+                    <TextBlock Text="SCAN BARCODE / SEARCH PRODUCT"
+                               FontSize="12"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource MutedBrush}" />
+                    <TextBox x:Name="SearchBox"
+                             Margin="0,6,0,0"
+                             FontSize="24"
+                             FontWeight="SemiBold"
+                             MinHeight="58"
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             KeyDown="OnSearchKeyDown" />
+                </StackPanel>
                 <Button Grid.Column="1"
-                        Margin="10,0,0,0"
-                        Content="Search / Add"
+                        Margin="12,22,0,0"
+                        Content="Add / Enter"
                         Style="{StaticResource PrimaryButton}"
                         Command="{Binding SearchCommand}" />
             </Grid>
@@ -56,23 +81,68 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <DataGrid Grid.Row="0"
+            <DataGrid x:Name="CartGrid"
+                      Grid.Row="0"
                       ItemsSource="{Binding CartLines}"
-                      SelectedItem="{Binding SelectedLine}"
-                      FontSize="15">
+                      SelectedItem="{Binding SelectedLine, Mode=TwoWay}"
+                      FontSize="15"
+                      RowHeight="54"
+                      AlternatingRowBackground="#F8FBFD"
+                      SelectionMode="Single"
+                      SelectionUnit="FullRow"
+                      CanUserResizeRows="False"
+                      CanUserSortColumns="False">
+                <DataGrid.ColumnHeaderStyle>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Height" Value="42" />
+                        <Setter Property="Padding" Value="10,0" />
+                        <Setter Property="FontSize" Value="13" />
+                        <Setter Property="FontWeight" Value="Bold" />
+                        <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+                    </Style>
+                </DataGrid.ColumnHeaderStyle>
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Item Code" Binding="{Binding ItemCode}" Width="120" IsReadOnly="True" />
-                    <DataGridTextColumn Header="Product Name" Binding="{Binding ProductName}" Width="*" IsReadOnly="True" />
-                    <DataGridTextColumn Header="Unit Price" Binding="{Binding UnitPrice, StringFormat=N2}" Width="110" IsReadOnly="True" />
-                    <DataGridTextColumn Header="Qty" Binding="{Binding Quantity, UpdateSourceTrigger=PropertyChanged}" Width="80" />
-                    <DataGridTextColumn Header="Discount" Binding="{Binding Discount, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" Width="100" />
-                    <DataGridTextColumn Header="Line Total" Binding="{Binding LineTotal, StringFormat=N2}" Width="120" IsReadOnly="True" />
-                    <DataGridTemplateColumn Header="Remove" Width="90">
+                    <DataGridTextColumn Header="ITEM CODE" Binding="{Binding ItemCode}" Width="128" IsReadOnly="True" />
+                    <DataGridTextColumn Header="PRODUCT NAME" Binding="{Binding ProductName}" Width="*" MinWidth="230" IsReadOnly="True" />
+                    <DataGridTextColumn Header="PRICE" Binding="{Binding UnitPrice, StringFormat=N2}" Width="105" IsReadOnly="True" />
+                    <DataGridTemplateColumn Header="QTY" Width="146">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate DataType="{x:Type viewModels:CartLineViewModel}">
-                                <Button Content="X"
-                                        MinHeight="30"
-                                        Padding="8,2"
+                                <Grid Margin="4,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="34" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="34" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0"
+                                            Content="-"
+                                            MinHeight="32"
+                                            Padding="0"
+                                            Command="{Binding DataContext.DecreaseQuantityCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                            CommandParameter="{Binding}" />
+                                    <TextBox Grid.Column="1"
+                                             Margin="6,0"
+                                             HorizontalContentAlignment="Center"
+                                             FontWeight="Bold"
+                                             Text="{Binding Quantity, UpdateSourceTrigger=PropertyChanged}" />
+                                    <Button Grid.Column="2"
+                                            Content="+"
+                                            MinHeight="32"
+                                            Padding="0"
+                                            Command="{Binding DataContext.IncreaseQuantityCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                            CommandParameter="{Binding}" />
+                                </Grid>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTextColumn Header="DISCOUNT" Binding="{Binding Discount, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" Width="105" />
+                    <DataGridTextColumn Header="LINE TOTAL" Binding="{Binding LineTotal, StringFormat=N2}" Width="130" IsReadOnly="True" />
+                    <DataGridTemplateColumn Header="" Width="70">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate DataType="{x:Type viewModels:CartLineViewModel}">
+                                <Button Content="Remove"
+                                        MinHeight="32"
+                                        Padding="6,2"
                                         Command="{Binding DataContext.RemoveLineCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                         CommandParameter="{Binding}" />
                             </DataTemplate>
@@ -83,29 +153,33 @@
 
             <Border Grid.Row="1"
                     Margin="0,12,0,0"
-                    Background="{StaticResource SurfaceBrush}"
-                    BorderBrush="{StaticResource BorderBrushSoft}"
-                    BorderThickness="1"
-                    CornerRadius="8"
+                    Style="{StaticResource PanelBorder}"
                     Visibility="{Binding SearchResults.Count, Converter={StaticResource ZeroToVisibilityConverter}}">
                 <ListBox ItemsSource="{Binding SearchResults}"
-                         MaxHeight="150"
+                         MaxHeight="170"
+                         BorderThickness="0"
                          MouseDoubleClick="OnSearchResultDoubleClick">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <DockPanel Margin="8">
-                                <TextBlock Text="{Binding SellingPrice, StringFormat=LKR {0:N2}}"
-                                           DockPanel.Dock="Right"
-                                           FontWeight="Bold"
-                                           Foreground="{StaticResource AccentBrush}" />
+                            <DockPanel Margin="10">
+                                <StackPanel DockPanel.Dock="Right" HorizontalAlignment="Right">
+                                    <TextBlock Text="{Binding SellingPrice, StringFormat=LKR {0:N2}}"
+                                               FontWeight="Bold"
+                                               FontSize="16"
+                                               Foreground="{StaticResource AccentBrush}" />
+                                    <TextBlock Text="{Binding StockQuantity, StringFormat=Stock {0:N0}}"
+                                               FontSize="12"
+                                               HorizontalAlignment="Right"
+                                               Foreground="{StaticResource MutedBrush}" />
+                                </StackPanel>
                                 <StackPanel>
-                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" />
                                     <TextBlock FontSize="12" Foreground="{StaticResource MutedBrush}">
                                         <Run Text="{Binding SKU}" />
                                         <Run Text="  |  " />
                                         <Run Text="{Binding Barcode}" />
-                                        <Run Text="  |  Stock " />
-                                        <Run Text="{Binding StockQuantity}" />
+                                        <Run Text="  |  " />
+                                        <Run Text="{Binding Brand}" />
                                     </TextBlock>
                                 </StackPanel>
                             </DockPanel>
@@ -118,29 +192,38 @@
         <Border Grid.Column="1"
                 Grid.Row="0"
                 Grid.RowSpan="3"
-                Background="{StaticResource SurfaceBrush}"
-                BorderBrush="{StaticResource BorderBrushSoft}"
-                BorderThickness="1"
-                CornerRadius="8"
+                Style="{StaticResource PanelBorder}"
                 Padding="18">
             <Grid>
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <StackPanel Grid.Row="0">
-                    <TextBlock Text="GRAND TOTAL" Foreground="{StaticResource MutedBrush}" FontSize="13" FontWeight="Bold" />
-                    <TextBlock Text="{Binding GrandTotal, StringFormat=LKR {0:N2}}"
-                               FontSize="39"
-                               FontWeight="Bold"
-                               Foreground="{StaticResource AccentGreenBrush}"
-                               Margin="0,2,0,18" />
-                </StackPanel>
+                <Border Grid.Row="0"
+                        Padding="18"
+                        Background="#ECF8F3"
+                        BorderBrush="#C7E8D9"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Margin="0,0,0,14">
+                    <StackPanel>
+                        <TextBlock Text="GRAND TOTAL"
+                                   Foreground="{StaticResource AccentGreenBrush}"
+                                   FontSize="13"
+                                   FontWeight="Bold" />
+                        <TextBlock Text="{Binding GrandTotal, StringFormat=LKR {0:N2}}"
+                                   FontSize="46"
+                                   FontWeight="Bold"
+                                   Foreground="{StaticResource AccentGreenBrush}"
+                                   Margin="0,2,0,0" />
+                    </StackPanel>
+                </Border>
 
-                <Grid Grid.Row="1" Margin="0,0,0,18">
+                <Grid Grid.Row="1" Margin="0,0,0,14">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
@@ -149,9 +232,8 @@
                         <RowDefinition Height="32" />
                         <RowDefinition Height="32" />
                         <RowDefinition Height="32" />
-                        <RowDefinition Height="40" />
                         <RowDefinition Height="48" />
-                        <RowDefinition Height="38" />
+                        <RowDefinition Height="44" />
                     </Grid.RowDefinitions>
 
                     <TextBlock Text="Subtotal" Grid.Row="0" Foreground="{StaticResource MutedBrush}" />
@@ -161,42 +243,68 @@
                     <TextBlock Text="Tax/VAT" Grid.Row="2" Foreground="{StaticResource MutedBrush}" />
                     <TextBlock Text="{Binding Tax, StringFormat=LKR {0:N2}}" Grid.Row="2" Grid.Column="1" FontWeight="SemiBold" />
                     <TextBlock Text="Paid Amount" Grid.Row="3" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" />
-                    <TextBox Text="{Binding PaidAmount, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" Grid.Row="3" Grid.Column="1" Width="145" />
+                    <TextBox Grid.Row="3"
+                             Grid.Column="1"
+                             Width="165"
+                             FontSize="18"
+                             FontWeight="SemiBold"
+                             HorizontalContentAlignment="Right"
+                             Text="{Binding PaidAmount, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" />
                     <TextBlock Text="Balance" Grid.Row="4" VerticalAlignment="Center" FontSize="18" FontWeight="Bold" />
-                    <TextBlock Text="{Binding Balance, StringFormat=LKR {0:N2}}" Grid.Row="4" Grid.Column="1" VerticalAlignment="Center" FontSize="20" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
-                    <TextBlock Text="{Binding SelectedPaymentMethod, StringFormat=Payment: {0}}" Grid.Row="5" Grid.ColumnSpan="2" Foreground="{StaticResource MutedBrush}" />
+                    <TextBlock Text="{Binding Balance, StringFormat=LKR {0:N2}}"
+                               Grid.Row="4"
+                               Grid.Column="1"
+                               VerticalAlignment="Center"
+                               FontSize="22"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource AccentBrush}" />
                 </Grid>
 
-                <StackPanel Grid.Row="2">
-                    <UniformGrid Columns="2" Rows="2" Margin="0,0,0,12">
-                        <Button Content="Cash  F8" Command="{Binding SetCashCommand}" Margin="0,0,6,6" />
-                        <Button Content="Card" Command="{Binding SetCardCommand}" Margin="6,0,0,6" />
-                        <Button Content="QR" Command="{Binding SetQrCommand}" Margin="0,6,6,0" />
-                        <Button Content="Split Payment" Command="{Binding SetSplitCommand}" Margin="6,6,0,0" />
-                    </UniformGrid>
-
-                    <UniformGrid Columns="2" Rows="3">
-                        <Button Content="Hold Bill F4" Command="{Binding HoldBillCommand}" Margin="0,0,6,6" />
-                        <Button Content="Recall Bill" Command="{Binding RecallBillCommand}" Margin="6,0,0,6" />
-                        <Button Content="Void Item" Command="{Binding VoidSelectedLineCommand}" Margin="0,6,6,6" />
-                        <Button Content="Cancel Esc" Command="{Binding CancelBillCommand}" Style="{StaticResource DangerButton}" Margin="6,6,0,6" />
-                        <Button Content="Complete F5" Command="{Binding CompleteSaleCommand}" Style="{StaticResource SuccessButton}" Margin="0,6,6,0" />
-                        <Button Content="Print Receipt" Command="{Binding PrintReceiptCommand}" Margin="6,6,0,0" />
+                <StackPanel Grid.Row="2" Margin="0,0,0,14">
+                    <TextBlock Text="{Binding SelectedPaymentMethod, StringFormat=PAYMENT METHOD: {0}}"
+                               FontSize="12"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource MutedBrush}"
+                               Margin="0,0,0,8" />
+                    <UniformGrid Columns="2" Rows="2">
+                        <Button Content="Cash  F8" Command="{Binding SetCashCommand}" Style="{StaticResource PaymentButton}" Margin="0,0,7,7" />
+                        <Button Content="Card" Command="{Binding SetCardCommand}" Style="{StaticResource PaymentButton}" Margin="7,0,0,7" />
+                        <Button Content="QR" Command="{Binding SetQrCommand}" Style="{StaticResource PaymentButton}" Margin="0,7,7,0" />
+                        <Button Content="Split" Command="{Binding SetSplitCommand}" Style="{StaticResource PaymentButton}" Margin="7,7,0,0" />
                     </UniformGrid>
                 </StackPanel>
 
-                <TextBlock Grid.Row="3"
-                           Text="{Binding StatusMessage}"
-                           TextWrapping="Wrap"
-                           Foreground="{StaticResource MutedBrush}"
-                           Margin="0,18,0,0" />
+                <UniformGrid Grid.Row="3" Columns="2" Rows="3" VerticalAlignment="Top">
+                    <Button Content="Hold F4" Command="{Binding HoldBillCommand}" Style="{StaticResource ActionButton}" Margin="0,0,7,7" />
+                    <Button Content="Recall" Command="{Binding RecallBillCommand}" Style="{StaticResource ActionButton}" Margin="7,0,0,7" />
+                    <Button Content="Void Item" Command="{Binding VoidSelectedLineCommand}" Style="{StaticResource ActionButton}" Margin="0,7,7,7" />
+                    <Button Content="Cancel Esc" Command="{Binding CancelBillCommand}" Style="{StaticResource DangerButton}" Margin="7,7,0,7" />
+                    <Button Content="Complete F5" Command="{Binding CompleteSaleCommand}" Style="{StaticResource SuccessButton}" Margin="0,7,7,0" />
+                    <Button Content="Print" Command="{Binding PrintReceiptCommand}" Style="{StaticResource ActionButton}" Margin="7,7,0,0" />
+                </UniformGrid>
+
+                <Border Grid.Row="4"
+                        Padding="12"
+                        Background="#F6F9FC"
+                        BorderBrush="{StaticResource BorderBrushSoft}"
+                        BorderThickness="1"
+                        CornerRadius="8">
+                    <TextBlock Text="{Binding StatusMessage}"
+                               Style="{StaticResource StatusText}"
+                               TextWrapping="Wrap"
+                               FontSize="14" />
+                </Border>
             </Grid>
         </Border>
 
-        <TextBlock Grid.Column="0"
-                   Grid.Row="2"
-                   Text="F1 Search Product   F2 Quantity   F3 Discount   F4 Hold Bill   F5 Complete Sale   F8 Cash Payment   Esc Cancel"
-                   Foreground="{StaticResource MutedBrush}"
-                   Margin="0,12,14,0" />
+        <Border Grid.Column="0"
+                Grid.Row="2"
+                Style="{StaticResource PanelBorder}"
+                Padding="12"
+                Margin="0,12,14,0">
+            <TextBlock Text="F1 Scan/Search   F2 Edit Qty   F3 Edit Discount   F4 Hold   F5 Complete   F8 Cash   Esc Cancel"
+                       Foreground="{StaticResource MutedBrush}"
+                       FontWeight="SemiBold" />
+        </Border>
     </Grid>
 </UserControl>
