@@ -20,6 +20,10 @@ public class PosViewModel : ObservableObject
     private CartLineViewModel? _selectedLine;
     private string _lastCompletedInvoice = "No completed sale yet";
     private string _lastReceiptSummary = "Complete a sale to see the receipt summary.";
+    private string _lastScannedItemName = "No item scanned";
+    private string _lastScannedItemCode = "-";
+    private decimal _lastScannedItemPrice;
+    private decimal _lastScannedItemStock;
 
     public PosViewModel(ProductService productService, SaleService saleService, int userId)
     {
@@ -133,6 +137,30 @@ public class PosViewModel : ObservableObject
         set => SetProperty(ref _lastReceiptSummary, value);
     }
 
+    public string LastScannedItemName
+    {
+        get => _lastScannedItemName;
+        set => SetProperty(ref _lastScannedItemName, value);
+    }
+
+    public string LastScannedItemCode
+    {
+        get => _lastScannedItemCode;
+        set => SetProperty(ref _lastScannedItemCode, value);
+    }
+
+    public decimal LastScannedItemPrice
+    {
+        get => _lastScannedItemPrice;
+        set => SetProperty(ref _lastScannedItemPrice, value);
+    }
+
+    public decimal LastScannedItemStock
+    {
+        get => _lastScannedItemStock;
+        set => SetProperty(ref _lastScannedItemStock, value);
+    }
+
     public AsyncRelayCommand SearchCommand { get; }
     public AsyncRelayCommand CompleteSaleCommand { get; }
     public RelayCommand CancelBillCommand { get; }
@@ -183,6 +211,11 @@ public class PosViewModel : ObservableObject
 
     public void AddProduct(Product product)
     {
+        LastScannedItemName = product.Name;
+        LastScannedItemCode = string.IsNullOrWhiteSpace(product.SKU) ? product.Barcode : product.SKU;
+        LastScannedItemPrice = product.SellingPrice;
+        LastScannedItemStock = product.StockQuantity;
+
         var existing = CartLines.FirstOrDefault(x => x.ProductId == product.Id);
         if (existing is not null)
         {
@@ -278,6 +311,10 @@ public class PosViewModel : ObservableObject
         PaidAmount = 0;
         SelectedLine = null;
         DraftBillNumber = NewDraftBillNumber();
+        LastScannedItemName = "No item scanned";
+        LastScannedItemCode = "-";
+        LastScannedItemPrice = 0;
+        LastScannedItemStock = 0;
         RefreshTotals();
         SetStatus("Bill cleared. Ready for next customer.");
     }

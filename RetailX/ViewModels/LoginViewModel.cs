@@ -8,7 +8,7 @@ public class LoginViewModel : ObservableObject
     private readonly AuthService _authService;
     private readonly Action<User> _onLoggedIn;
     private string _username = "admin";
-    private string _password = string.Empty;
+    private string _password = "admin123";
     private string _errorMessage = string.Empty;
 
     public LoginViewModel(AuthService authService, Action<User> onLoggedIn)

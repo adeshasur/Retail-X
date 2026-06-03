@@ -1,7 +1,8 @@
 <UserControl x:Class="RetailX.Views.LoginView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:controls="clr-namespace:RetailX.Controls">
+             xmlns:controls="clr-namespace:RetailX.Controls"
+             Loaded="OnLoaded">
     <Grid>
         <Grid.Background>
             <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">

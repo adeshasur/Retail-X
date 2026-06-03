@@ -11,6 +11,14 @@ public partial class LoginView : UserControl
         InitializeComponent();
     }
 
+    private void OnLoaded(object sender, System.Windows.RoutedEventArgs e)
+    {
+        if (DataContext is LoginViewModel viewModel && PasswordInput.Password != viewModel.Password)
+        {
+            PasswordInput.Password = viewModel.Password;
+        }
+    }
+
     private void OnPasswordChanged(object sender, System.Windows.RoutedEventArgs e)
     {
         if (DataContext is LoginViewModel viewModel)
