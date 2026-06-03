@@ -1,13 +1,13 @@
-# NexaTill POS by CodaWix
+# Retail-X by CodaWix™
 
 Initial runnable WPF/.NET 8 supermarket POS starter.
 
 ## Run
 
 ```powershell
-dotnet restore NexaTillPOS.slnx
-dotnet build NexaTillPOS.slnx
-dotnet run --project NexaTillPOS\NexaTillPOS.csproj
+dotnet restore RetailX.slnx
+dotnet build RetailX.slnx
+dotnet run --project RetailX\RetailX.csproj
 ```
 
 Default development login:
@@ -17,14 +17,14 @@ Default development login:
 
 The SQLite database is created automatically at:
 
-`%LOCALAPPDATA%\CodaWix\NexaTillPOS\nexatill.db`
+`%LOCALAPPDATA%\CodaWix\RetailX\retailx.db`
 
 ## Structure
 
-- `NexaTillPOS/Models` - EF Core domain entities and enums.
-- `NexaTillPOS/Data` - SQLite `DbContext` and development database seeding.
-- `NexaTillPOS/Services` - authentication, password hashing, product search, and sale completion.
-- `NexaTillPOS/ViewModels` - MVVM state, commands, POS cart logic, shell navigation, reports, and placeholders.
-- `NexaTillPOS/Views` - WPF XAML screens for login, shell, POS, product list, reports, and placeholders.
-- `NexaTillPOS/Controls` - WPF helper controls/attached properties.
-- `NexaTillPOS/Converters` - XAML value converters.
+- `RetailX/Models` - EF Core domain entities and enums.
+- `RetailX/Data` - SQLite `DbContext` and development database seeding.
+- `RetailX/Services` - authentication, password hashing, product search, and sale completion.
+- `RetailX/ViewModels` - MVVM state, commands, POS cart logic, shell navigation, reports, and placeholders.
+- `RetailX/Views` - WPF XAML screens for login, shell, POS, product list, reports, and placeholders.
+- `RetailX/Controls` - WPF helper controls/attached properties.
+- `RetailX/Converters` - XAML value converters.
