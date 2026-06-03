@@ -101,7 +101,7 @@ public class SaleService
 
     private static async Task<string> GenerateInvoiceNumberAsync(PosDbContext db)
     {
-        var prefix = $"NT-{DateTime.Now:yyyyMMdd}-";
+        var prefix = $"RX-{DateTime.Now:yyyyMMdd}-";
         var count = await db.Sales.CountAsync(x => x.InvoiceNumber.StartsWith(prefix)) + 1;
         return $"{prefix}{count:0000}";
     }

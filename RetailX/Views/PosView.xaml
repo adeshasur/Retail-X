@@ -50,11 +50,15 @@
                 Padding="18"
                 Margin="0,0,16,16">
             <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="150" />
                 </Grid.ColumnDefinitions>
-                <StackPanel>
+                <StackPanel Grid.Row="0">
                     <DockPanel>
                         <TextBlock Text="SCAN BARCODE / SEARCH PRODUCT"
                                    DockPanel.Dock="Left"
@@ -75,11 +79,43 @@
                              Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                              KeyDown="OnSearchKeyDown" />
                 </StackPanel>
-                <Button Grid.Column="1"
+                <Button Grid.Row="0"
+                        Grid.Column="1"
                         Margin="12,22,0,0"
                         Content="Add / Enter"
                         Style="{StaticResource PrimaryButton}"
                         Command="{Binding SearchCommand}" />
+
+                <UniformGrid Grid.Row="1" Grid.ColumnSpan="2" Columns="4" Rows="1" Margin="0,14,0,0">
+                    <Border Margin="0,0,8,0" Padding="10" Background="{StaticResource SurfaceAltBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="9">
+                        <StackPanel>
+                            <TextBlock Text="BILL" FontSize="10" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" />
+                            <TextBlock Text="{Binding DraftBillNumber}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" />
+                        </StackPanel>
+                    </Border>
+                    <Border Margin="4,0,8,0" Padding="10" Background="{StaticResource SurfaceAltBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="9">
+                        <StackPanel>
+                            <TextBlock Text="ITEMS / QTY" FontSize="10" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" />
+                            <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}">
+                                <Run Text="{Binding ItemCount}" />
+                                <Run Text=" items / " />
+                                <Run Text="{Binding TotalQuantity, StringFormat=N0}" />
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+                    <Border Margin="4,0,8,0" Padding="10" Background="{StaticResource SurfaceAltBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="9">
+                        <StackPanel>
+                            <TextBlock Text="HELD BILLS" FontSize="10" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" />
+                            <TextBlock Text="{Binding HeldBillCount}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" />
+                        </StackPanel>
+                    </Border>
+                    <Border Margin="4,0,0,0" Padding="10" Background="#EAF7F4" BorderBrush="#BFE7D3" BorderThickness="1" CornerRadius="9">
+                        <StackPanel>
+                            <TextBlock Text="PAYMENT" FontSize="10" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" />
+                            <TextBlock Text="{Binding PaymentStatus}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource AccentGreenBrush}" />
+                        </StackPanel>
+                    </Border>
+                </UniformGrid>
             </Grid>
         </Border>
 
@@ -266,7 +302,7 @@
                              HorizontalContentAlignment="Right"
                              Text="{Binding PaidAmount, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" />
                     <TextBlock Text="Balance" Grid.Row="4" VerticalAlignment="Center" FontSize="18" FontWeight="Bold" />
-                    <TextBlock Text="{Binding Balance, StringFormat=LKR {0:N2}}"
+                    <TextBlock Text="{Binding ChangeDue, StringFormat=LKR {0:N2}}"
                                Grid.Row="4"
                                Grid.Column="1"
                                VerticalAlignment="Center"
@@ -287,6 +323,14 @@
                         <Button Content="QR" Command="{Binding SetQrCommand}" Style="{StaticResource PaymentButton}" Margin="0,7,7,0" />
                         <Button Content="Split" Command="{Binding SetSplitCommand}" Style="{StaticResource PaymentButton}" Margin="7,7,0,0" />
                     </UniformGrid>
+
+                    <UniformGrid Columns="5" Rows="1" Margin="0,12,0,0">
+                        <Button Content="Exact" Command="{Binding ExactCashCommand}" MinHeight="38" Padding="6" Margin="0,0,5,0" />
+                        <Button Content="+500" Command="{Binding AddCash500Command}" MinHeight="38" Padding="6" Margin="3,0,5,0" />
+                        <Button Content="+1000" Command="{Binding AddCash1000Command}" MinHeight="38" Padding="6" Margin="3,0,5,0" />
+                        <Button Content="+5000" Command="{Binding AddCash5000Command}" MinHeight="38" Padding="6" Margin="3,0,5,0" />
+                        <Button Content="Clear" Command="{Binding ClearPaidCommand}" MinHeight="38" Padding="6" Margin="3,0,0,0" />
+                    </UniformGrid>
                 </StackPanel>
 
                 <UniformGrid Grid.Row="3" Columns="2" Rows="3" VerticalAlignment="Top">
@@ -304,10 +348,17 @@
                         BorderBrush="{StaticResource BorderBrushSoft}"
                         BorderThickness="1"
                         CornerRadius="10">
-                    <TextBlock Text="{Binding StatusMessage}"
-                               Style="{StaticResource StatusText}"
-                               TextWrapping="Wrap"
-                               FontSize="14" />
+                    <StackPanel>
+                        <TextBlock Text="{Binding StatusMessage}"
+                                   Style="{StaticResource StatusText}"
+                                   TextWrapping="Wrap"
+                                   FontSize="14" />
+                        <TextBlock Text="{Binding LastReceiptSummary}"
+                                   Margin="0,8,0,0"
+                                   TextWrapping="Wrap"
+                                   FontSize="12"
+                                   Foreground="{StaticResource MutedBrush}" />
+                    </StackPanel>
                 </Border>
             </Grid>
         </Border>

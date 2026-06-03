@@ -22,9 +22,9 @@ public class ShellViewModel : ObservableObject
         _saleService = saleService;
         LogoutCommand = new RelayCommand(logout);
         NavigatePosCommand = new RelayCommand(() => ShowPos());
-        NavigateProductsCommand = new RelayCommand(() => CurrentModule = new PlaceholderViewModel("Products", "Product add, edit, delete, search and filter tools will be implemented in the next milestone."));
+        NavigateProductsCommand = new RelayCommand(() => CurrentModule = new ProductsViewModel(_productService));
         NavigateInventoryCommand = new RelayCommand(() => CurrentModule = new PlaceholderViewModel("Inventory Management", "Stock in, stock adjustments, movement history, low stock and expiry tracking placeholders."));
-        NavigateReportsCommand = new RelayCommand(() => CurrentModule = new PlaceholderViewModel("Reports", "Today sales, top products, low stock and payment summaries will be implemented in the next milestone."));
+        NavigateReportsCommand = new RelayCommand(() => CurrentModule = new ReportsViewModel());
         NavigateSettingsCommand = new RelayCommand(() => CurrentModule = new PlaceholderViewModel("Settings", "Store profile, branch, LKR currency, VAT percentage and ESC/POS printer setup placeholders."));
 
         ShowPos();

@@ -7,15 +7,19 @@ namespace RetailX.ViewModels;
 
 public class PosViewModel : ObservableObject
 {
+    private static readonly List<HeldBillSnapshot> HeldBills = [];
     private readonly ProductService _productService;
     private readonly SaleService _saleService;
     private readonly int _userId;
+    private string _draftBillNumber = NewDraftBillNumber();
     private string _searchText = string.Empty;
     private string _statusMessage = "Ready for barcode scan or product search.";
     private bool _isStatusError;
     private decimal _paidAmount;
     private PaymentMethod _selectedPaymentMethod = PaymentMethod.Cash;
     private CartLineViewModel? _selectedLine;
+    private string _lastCompletedInvoice = "No completed sale yet";
+    private string _lastReceiptSummary = "Complete a sale to see the receipt summary.";
 
     public PosViewModel(ProductService productService, SaleService saleService, int userId)
     {
@@ -37,9 +41,14 @@ public class PosViewModel : ObservableObject
         VoidSelectedLineCommand = new RelayCommand(VoidSelectedLine);
         IncreaseQuantityCommand = new RelayCommand<CartLineViewModel>(IncreaseQuantity);
         DecreaseQuantityCommand = new RelayCommand<CartLineViewModel>(DecreaseQuantity);
-        HoldBillCommand = new RelayCommand(() => SetStatus("Hold bill is planned for the next milestone."));
-        RecallBillCommand = new RelayCommand(() => SetStatus("Recall bill is planned for the next milestone."));
-        PrintReceiptCommand = new RelayCommand(() => SetStatus("Receipt printing via ESC/POS is planned for later."));
+        ExactCashCommand = new RelayCommand(() => SetPaidAmount(GrandTotal));
+        AddCash500Command = new RelayCommand(() => SetPaidAmount(PaidAmount + 500));
+        AddCash1000Command = new RelayCommand(() => SetPaidAmount(PaidAmount + 1000));
+        AddCash5000Command = new RelayCommand(() => SetPaidAmount(PaidAmount + 5000));
+        ClearPaidCommand = new RelayCommand(() => SetPaidAmount(0));
+        HoldBillCommand = new RelayCommand(HoldCurrentBill, () => CartLines.Count > 0);
+        RecallBillCommand = new RelayCommand(RecallLastHeldBill, () => HeldBills.Count > 0);
+        PrintReceiptCommand = new RelayCommand(() => SetStatus($"Receipt ready for {LastCompletedInvoice}. ESC/POS printing will be wired later."));
     }
 
     public ObservableCollection<Product> SearchResults { get; }
@@ -63,6 +72,12 @@ public class PosViewModel : ObservableObject
         set => SetProperty(ref _isStatusError, value);
     }
 
+    public string DraftBillNumber
+    {
+        get => _draftBillNumber;
+        set => SetProperty(ref _draftBillNumber, value);
+    }
+
     public decimal PaidAmount
     {
         get => _paidAmount;
@@ -71,6 +86,9 @@ public class PosViewModel : ObservableObject
             if (SetProperty(ref _paidAmount, Math.Max(0, value)))
             {
                 OnPropertyChanged(nameof(Balance));
+                OnPropertyChanged(nameof(AmountDue));
+                OnPropertyChanged(nameof(ChangeDue));
+                OnPropertyChanged(nameof(PaymentStatus));
             }
         }
     }
@@ -92,6 +110,28 @@ public class PosViewModel : ObservableObject
     public decimal Tax => 0;
     public decimal GrandTotal => Subtotal - Discount + Tax;
     public decimal Balance => Math.Max(0, PaidAmount - GrandTotal);
+    public decimal AmountDue => Math.Max(0, GrandTotal - PaidAmount);
+    public decimal ChangeDue => Math.Max(0, PaidAmount - GrandTotal);
+    public int ItemCount => CartLines.Count;
+    public decimal TotalQuantity => CartLines.Sum(x => x.Quantity);
+    public int HeldBillCount => HeldBills.Count;
+    public string PaymentStatus => GrandTotal <= 0
+        ? "No active bill"
+        : PaidAmount >= GrandTotal
+            ? "Ready to complete"
+            : $"Due LKR {AmountDue:N2}";
+
+    public string LastCompletedInvoice
+    {
+        get => _lastCompletedInvoice;
+        set => SetProperty(ref _lastCompletedInvoice, value);
+    }
+
+    public string LastReceiptSummary
+    {
+        get => _lastReceiptSummary;
+        set => SetProperty(ref _lastReceiptSummary, value);
+    }
 
     public AsyncRelayCommand SearchCommand { get; }
     public AsyncRelayCommand CompleteSaleCommand { get; }
@@ -105,6 +145,11 @@ public class PosViewModel : ObservableObject
     public RelayCommand VoidSelectedLineCommand { get; }
     public RelayCommand<CartLineViewModel> IncreaseQuantityCommand { get; }
     public RelayCommand<CartLineViewModel> DecreaseQuantityCommand { get; }
+    public RelayCommand ExactCashCommand { get; }
+    public RelayCommand AddCash500Command { get; }
+    public RelayCommand AddCash1000Command { get; }
+    public RelayCommand AddCash5000Command { get; }
+    public RelayCommand ClearPaidCommand { get; }
     public RelayCommand HoldBillCommand { get; }
     public RelayCommand RecallBillCommand { get; }
     public RelayCommand PrintReceiptCommand { get; }
@@ -166,11 +211,6 @@ public class PosViewModel : ObservableObject
             SetStatus($"{product.Name} added.");
         }
 
-        if (PaidAmount < GrandTotal)
-        {
-            PaidAmount = GrandTotal;
-        }
-
         RefreshTotals();
     }
 
@@ -214,6 +254,8 @@ public class PosViewModel : ObservableObject
                 SelectedPaymentMethod,
                 PaidAmount);
 
+            LastCompletedInvoice = invoice;
+            LastReceiptSummary = $"{invoice} | {ItemCount} items / {TotalQuantity:N0} qty | Total LKR {GrandTotal:N2} | Paid LKR {PaidAmount:N2} | Change LKR {ChangeDue:N2}";
             CancelBill();
             SetStatus($"Sale completed. Invoice {invoice} saved.");
         }
@@ -235,6 +277,7 @@ public class PosViewModel : ObservableObject
         SearchText = string.Empty;
         PaidAmount = 0;
         SelectedLine = null;
+        DraftBillNumber = NewDraftBillNumber();
         RefreshTotals();
         SetStatus("Bill cleared. Ready for next customer.");
     }
@@ -242,8 +285,66 @@ public class PosViewModel : ObservableObject
     private void SelectPayment(PaymentMethod method)
     {
         SelectedPaymentMethod = method;
-        PaidAmount = GrandTotal;
+        if (method is PaymentMethod.Card or PaymentMethod.QR)
+        {
+            SetPaidAmount(GrandTotal);
+        }
+
         SetStatus($"{method} payment selected.");
+    }
+
+    private void SetPaidAmount(decimal amount)
+    {
+        PaidAmount = amount;
+        SetStatus(PaidAmount >= GrandTotal
+            ? $"Payment covered. Change LKR {ChangeDue:N2}."
+            : $"Payment captured. Amount due LKR {AmountDue:N2}.",
+            GrandTotal > 0 && PaidAmount < GrandTotal);
+    }
+
+    private void HoldCurrentBill()
+    {
+        var snapshot = new HeldBillSnapshot(
+            $"HOLD-{DateTime.Now:HHmmss}",
+            DraftBillNumber,
+            SelectedPaymentMethod,
+            PaidAmount,
+            CartLines.Select(CloneLine).ToList());
+
+        HeldBills.Add(snapshot);
+        CancelBill();
+        OnPropertyChanged(nameof(HeldBillCount));
+        RecallBillCommand.RaiseCanExecuteChanged();
+        SetStatus($"{snapshot.HoldNumber} held. Ready for next customer.");
+    }
+
+    private void RecallLastHeldBill()
+    {
+        if (HeldBills.Count == 0)
+        {
+            SetStatus("No held bills available.", true);
+            return;
+        }
+
+        CancelBill();
+        var snapshot = HeldBills[^1];
+        HeldBills.RemoveAt(HeldBills.Count - 1);
+
+        DraftBillNumber = snapshot.DraftBillNumber;
+        SelectedPaymentMethod = snapshot.PaymentMethod;
+        PaidAmount = snapshot.PaidAmount;
+
+        foreach (var line in snapshot.Lines.Select(CloneLine))
+        {
+            line.PropertyChanged += CartLineChanged;
+            CartLines.Add(line);
+        }
+
+        SelectedLine = CartLines.LastOrDefault();
+        RefreshTotals();
+        OnPropertyChanged(nameof(HeldBillCount));
+        RecallBillCommand.RaiseCanExecuteChanged();
+        SetStatus($"{snapshot.HoldNumber} recalled.");
     }
 
     private void IncreaseQuantity(CartLineViewModel line)
@@ -298,7 +399,35 @@ public class PosViewModel : ObservableObject
         OnPropertyChanged(nameof(Tax));
         OnPropertyChanged(nameof(GrandTotal));
         OnPropertyChanged(nameof(Balance));
+        OnPropertyChanged(nameof(AmountDue));
+        OnPropertyChanged(nameof(ChangeDue));
+        OnPropertyChanged(nameof(ItemCount));
+        OnPropertyChanged(nameof(TotalQuantity));
+        OnPropertyChanged(nameof(PaymentStatus));
         CompleteSaleCommand.RaiseCanExecuteChanged();
         CancelBillCommand.RaiseCanExecuteChanged();
+        HoldBillCommand.RaiseCanExecuteChanged();
+        RecallBillCommand.RaiseCanExecuteChanged();
     }
+
+    private static string NewDraftBillNumber() => $"DRAFT-{DateTime.Now:yyyyMMdd-HHmmss}";
+
+    private static CartLineViewModel CloneLine(CartLineViewModel line)
+    {
+        return new CartLineViewModel(
+            line.ProductId,
+            line.ItemCode,
+            line.ProductName,
+            line.UnitPrice,
+            line.AvailableStock,
+            line.Quantity,
+            line.Discount);
+    }
+
+    private sealed record HeldBillSnapshot(
+        string HoldNumber,
+        string DraftBillNumber,
+        PaymentMethod PaymentMethod,
+        decimal PaidAmount,
+        List<CartLineViewModel> Lines);
 }

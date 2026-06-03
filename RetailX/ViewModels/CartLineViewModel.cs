@@ -16,6 +16,24 @@ public class CartLineViewModel : ObservableObject
         AvailableStock = product.StockQuantity;
     }
 
+    public CartLineViewModel(
+        int productId,
+        string itemCode,
+        string productName,
+        decimal unitPrice,
+        decimal availableStock,
+        decimal quantity,
+        decimal discount)
+    {
+        ProductId = productId;
+        ItemCode = itemCode;
+        ProductName = productName;
+        UnitPrice = unitPrice;
+        AvailableStock = availableStock;
+        _quantity = quantity;
+        _discount = discount;
+    }
+
     public int ProductId { get; }
     public string ItemCode { get; }
     public string ProductName { get; }
